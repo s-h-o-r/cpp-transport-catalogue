@@ -17,6 +17,12 @@ struct Request {
 
 Request ParseRequest(std::string_view request);
 
+void PrintBusStat(const TransportCatalogue& catalogue, std::string_view bus_name,
+                  std::ostream& output);
+
+void PrintStopStat(const TransportCatalogue& catalogue, std::string_view stop_name,
+                   std::ostream& output);
+
 void PrintStat(const TransportCatalogue& tansport_catalogue,
                const Request& request, std::ostream& output);
 

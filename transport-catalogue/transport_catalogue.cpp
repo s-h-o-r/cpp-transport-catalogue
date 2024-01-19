@@ -5,7 +5,21 @@
 
 namespace transport {
 
-void TransportCatalogue::AddStop(std::string_view name, Coordinates&& coordinates) {
+double Bus::ComputeRouteLenght() const {
+    double route_length = 0.0;
+    const Stop* from = nullptr;
+    for (const Stop* to : route) {
+        if (from == nullptr) {
+            from = to;
+            continue;
+        }
+        route_length += ComputeDistance(from->coordinates, to->coordinates);
+        from = to;
+    }
+    return route_length;
+}
+
+void TransportCatalogue::AddStop(std::string_view name, const Coordinates& coordinates) {
     stops_.push_back({ std::string(name), coordinates });
     stops_index_[stops_.back().name] = &stops_.back();
 }
@@ -33,35 +47,18 @@ void TransportCatalogue::AddBus(std::string_view name, const std::vector<std::st
     }
 }
 
-bool TransportCatalogue::IsRouteExisted(std::string_view name) const {
-    return buses_index_.find(name) != buses_index_.end();
-}
-
-bool TransportCatalogue::IsStopExisted(std::string_view name) const {
-    return stops_index_.find(name) != stops_index_.end();
-}
-
-size_t TransportCatalogue::GetRouteStopsAmount(std::string_view name) const {
-    return buses_index_.at(name)->route.size();
-}
-
-size_t TransportCatalogue::GetRouteUniqueStopsAmount(std::string_view name) const {
-    return buses_index_.at(name)->unique_stops_amount;
-}
-
-double TransportCatalogue::GetRouteLenght(std::string_view name) const {
-    double route_length = 0.0;
-    const Stop* from = nullptr;
-    for (const Stop* to : buses_index_.at(name)->route) {
-        if (from == nullptr) {
-            from = to;
-            continue;
-        }
-        route_length += ComputeDistance(from->coordinates, to->coordinates);
-        from = to;
+const Bus* TransportCatalogue::IsRouteExisted(std::string_view name) const {
+    if (buses_index_.find(name) != buses_index_.end()) {
+        return buses_index_.at(name);
     }
+    return nullptr;
+}
 
-    return route_length;
+const Stop* TransportCatalogue::IsStopExisted(std::string_view name) const {
+    if (stops_index_.find(name) != stops_index_.end()) {
+        return stops_index_.at(name);
+    }
+    return nullptr;
 }
 
 std::set<std::string_view> TransportCatalogue::GetBusesListForStop(std::string_view name) const {

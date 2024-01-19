@@ -20,24 +20,20 @@ struct Bus {
     std::string name;
     std::vector<const Stop*> route;
     size_t unique_stops_amount = 0;
+
+    double ComputeRouteLenght() const;
 };
 
 class TransportCatalogue {
 public:
     
-    void AddStop(std::string_view name, Coordinates&& coordinates);
-    
+    void AddStop(std::string_view name, const Coordinates& coordinates);
+
     void AddBus(std::string_view name, const std::vector<std::string_view>& route);
     
-    bool IsRouteExisted(std::string_view name) const;
-    
-    bool IsStopExisted(std::string_view name) const;
-    
-    size_t GetRouteStopsAmount(std::string_view name) const;
-    
-    size_t GetRouteUniqueStopsAmount(std::string_view name) const;
-    
-    double GetRouteLenght(std::string_view name) const;
+    const Bus* IsRouteExisted(std::string_view name) const;
+
+    const Stop* IsStopExisted(std::string_view name) const;
     
     std::set<std::string_view> GetBusesListForStop(std::string_view name) const;
     

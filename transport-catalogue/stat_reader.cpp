@@ -17,36 +17,47 @@ Request ParseRequest(std::string_view request) {
         std::string(request.substr(first_symbol2, last_symbol - first_symbol2 + 1)) };
 }
 
+void PrintBusStat(const TransportCatalogue& catalogue, std::string_view bus_name,
+                  std::ostream& output) {
+    using namespace std::string_literals;
+    output << "Bus "s << bus_name << ": "s;
+    const Bus* bus_info = catalogue.IsRouteExisted(bus_name);
+    if (bus_info == nullptr) {
+        output  << "not found\n"s;
+    } else {
+        output << bus_info->route.size() << " stops on route, "s
+        << bus_info->unique_stops_amount << " unique stops, "s
+        << std::setprecision(6) << bus_info->ComputeRouteLenght() << " route length\n"s;
+    }
+}
+
+void PrintStopStat(const TransportCatalogue& catalogue, std::string_view stop_name,
+                   std::ostream& output) {
+    using namespace std::string_literals;
+    output << "Stop "s << stop_name << ": "s;
+    if (catalogue.IsStopExisted(stop_name) == nullptr) {
+        output  << "not found\n"s;
+    } else {
+        const std::set<std::string_view> buses_on_stop = catalogue.GetBusesListForStop(stop_name);
+        if (buses_on_stop.empty()) {
+            output << "no buses\n"s;
+        } else {
+            output << "buses";
+            for (const auto bus : buses_on_stop) {
+                output << " "s << bus;
+            }
+            output << "\n"s;
+        }
+    }
+}
+
 void PrintStat(const TransportCatalogue& catalogue, const Request& request,
                std::ostream& output) {
     using namespace std::string_literals;
     if (request.name == "Bus"s) {
-        output << "Bus "s << request.id << ": "s;
-        if (!catalogue.IsRouteExisted(request.id)) {
-            output  << "not found\n"s;
-        } else {
-            std::string_view bus_name = request.id;
-            output << catalogue.GetRouteStopsAmount(bus_name) << " stops on route, "s
-            << catalogue.GetRouteUniqueStopsAmount(bus_name) << " unique stops, "s
-            << std::setprecision(6) << catalogue.GetRouteLenght(bus_name) << " route length\n"s;
-        }
+        PrintBusStat(catalogue, request.id, output);
     } else if (request.name == "Stop"s) {
-        output << "Stop "s << request.id << ": "s;
-        if (!catalogue.IsStopExisted(request.id)) {
-            output  << "not found\n"s;
-        } else {
-            std::string_view stop_name = request.id;
-            const std::set<std::string_view> buses_on_stop = catalogue.GetBusesListForStop(stop_name);
-            if (buses_on_stop.empty()) {
-                output << "no buses\n"s;
-            } else {
-                output << "buses ";
-                for (const auto bus : buses_on_stop) {
-                    output << bus << " "s;
-                }
-                output << "\n"s;
-            }
-        }
+        PrintStopStat(catalogue, request.id, output);
     }
 }
 
