@@ -4,13 +4,9 @@
 #include <cassert>
 #include <iterator>
 
-/**
- * Парсит строку вида "10.123,  -30.1837" и возвращает пару координат (широта, долгота)
- */
 namespace transport {
 namespace input {
 namespace detail {
-
 
 Coordinates ParseCoordinates(std::string_view str) {
     static const double nan = std::nan("");
@@ -79,6 +75,19 @@ std::vector<std::string_view> ParseRoute(std::string_view route) {
     return results;
 }
 
+std::vector<std::pair<std::string_view, int>> ParseDistances(std::string_view description) {
+    std::vector<std::string_view> parsed_decription = Split(description, ',');
+    parsed_decription.erase(parsed_decription.begin(), parsed_decription.begin() + 2); // удаляем координаты из вектора, которые тоже туда попали
+    std::vector<std::pair<std::string_view, int>> distances;
+    for (const auto& string : parsed_decription) {
+        auto m_pos = string.find('m');
+        auto name_begin = m_pos + 5;
+        distances.push_back({string.substr(name_begin, string.size() - name_begin), 
+                             std::stoi(std::string(string.substr(0, m_pos)))});
+    }
+    return distances;
+}
+
 CommandDescription ParseCommandDescription(std::string_view line) {
     auto colon_pos = line.find(':');
     if (colon_pos == line.npos) {
@@ -113,7 +122,7 @@ void InputReader::ApplyCommands([[maybe_unused]] TransportCatalogue& catalogue) 
     using namespace std::string_literals;
 
     std::sort(commands_.begin(), commands_.end(), [](const CommandDescription& lhs, const CommandDescription& rhs)
-              { return lhs.command > rhs.command; });
+                                                    { return lhs.command > rhs.command; });
     for (auto& command : commands_) {
         if (command) {
             if (command.command == "Stop"s) {
@@ -122,6 +131,14 @@ void InputReader::ApplyCommands([[maybe_unused]] TransportCatalogue& catalogue) 
 
             if (command.command == "Bus"s) {
                 catalogue.AddBus(command.id, detail::ParseRoute(command.description));
+            }
+        }
+    }
+
+    for (auto& command : commands_) {
+        if (command) {
+            if (command.command == "Stop"s) {
+                catalogue.AddDistances(command.id, detail::ParseDistances(command.description));
             }
         }
     }

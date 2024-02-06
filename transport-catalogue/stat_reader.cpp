@@ -25,9 +25,12 @@ void PrintBusStat(const TransportCatalogue& catalogue, std::string_view bus_name
     if (bus_info == nullptr) {
         output  << "not found\n"s;
     } else {
+        auto [length, curvature] = catalogue.GetGeoLengthAndCurvature(bus_info);
+
         output << bus_info->route.size() << " stops on route, "s
         << bus_info->unique_stops_amount << " unique stops, "s
-        << std::setprecision(6) << bus_info->ComputeRouteLenght() << " route length\n"s;
+        << length << " route length, "s
+        << std::setprecision(6) << curvature << " curvature\n";
     }
 }
 
