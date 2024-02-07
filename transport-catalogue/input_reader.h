@@ -32,7 +32,11 @@ public:
     void ApplyCommands(TransportCatalogue& catalogue);
 
 private:
-    std::vector<CommandDescription> commands_;
+    std::vector<CommandDescription> bus_commands_;
+    std::vector<CommandDescription> stop_commands_;
+
+    void ProcessStopCommands([[maybe_unused]] TransportCatalogue& catalogue);
+    void ProcessBusCommands([[maybe_unused]] TransportCatalogue& catalogue);
 };
 } // namespace transport::input
 } // namespace transport

@@ -35,17 +35,19 @@ double Bus::ComputeDirectRouteLenght() const {
     return route_length;
 }
 
+double Bus::ComputeCurvature() const {
+    return geo_length / ComputeDirectRouteLenght();
+}
+
 void TransportCatalogue::AddStop(std::string_view name, const Coordinates& coordinates) {
     stops_.push_back({ std::string(name), coordinates });
     stops_index_[stops_.back().name] = &stops_.back();
 }
 
-void TransportCatalogue::AddDistances(std::string_view name, const std::vector<std::pair<std::string_view, int>>& distances) {
-    for (const auto& [next_stop, distance] : distances) {
-        const Stop* stop1 = stops_index_.at(name);
-        const Stop* stop2 = stops_index_.at(next_stop);
-        stops_distances_index_[{stop1, stop2}] = distance;
-    }
+void TransportCatalogue::AddDistance(std::string_view from_name, std::string_view to_name, int distance) {
+    const Stop* stop1 = stops_index_.at(from_name);
+    const Stop* stop2 = stops_index_.at(to_name);
+    stops_distances_index_[{stop1, stop2}] = distance;
 }
 
 void TransportCatalogue::AddBus(std::string_view name, const std::vector<std::string_view>& route) {
@@ -63,6 +65,7 @@ void TransportCatalogue::AddBus(std::string_view name, const std::vector<std::st
             ++bus.unique_stops_amount;
         }
     }
+    FillGeoLength(bus);
     buses_.push_back(std::move(bus));
     const Bus* const added_bus_ptr = &buses_.back();
     buses_index_[buses_.back().name] = added_bus_ptr;
@@ -71,18 +74,27 @@ void TransportCatalogue::AddBus(std::string_view name, const std::vector<std::st
     }
 }
 
-const Bus* TransportCatalogue::IsRouteExisted(std::string_view name) const {
+const Bus* TransportCatalogue::GetBusInfo(std::string_view name) const {
     if (buses_index_.find(name) != buses_index_.end()) {
         return buses_index_.at(name);
     }
     return nullptr;
 }
 
-const Stop* TransportCatalogue::IsStopExisted(std::string_view name) const {
+const Stop* TransportCatalogue::GetStopInfo(std::string_view name) const {
     if (stops_index_.find(name) != stops_index_.end()) {
         return stops_index_.at(name);
     }
     return nullptr;
+}
+
+int TransportCatalogue::GetDistance(const Stop* from_name, const Stop* to_name) const {
+    auto distance_ptr = stops_distances_index_.find({from_name, to_name});
+    if (distance_ptr == stops_distances_index_.end()) {
+        distance_ptr = stops_distances_index_.find({to_name, from_name});
+    }
+
+    return distance_ptr->second;
 }
 
 std::set<std::string_view> TransportCatalogue::GetBusesListForStop(std::string_view name) const {
@@ -93,33 +105,16 @@ std::set<std::string_view> TransportCatalogue::GetBusesListForStop(std::string_v
     return stop_to_buses_index_.at(name);
 }
 
-std::pair<int, double> TransportCatalogue::GetGeoLengthAndCurvature(const Bus* route) const {
-    int geo_length = ComputeGeoLength(route);
-    return {static_cast<double>(geo_length), ComputeCurvature(geo_length, route->ComputeDirectRouteLenght())};
-}
-
-int TransportCatalogue::ComputeGeoLength(const Bus* route) const {
-    int length = 0;
+void TransportCatalogue::FillGeoLength(Bus& route) const {
     const Stop* current_stop = nullptr;
     const Stop* next_stop = nullptr;
-    for (const Stop* stop : route->route) {
+    for (const Stop* stop : route.route) {
         next_stop = stop;
         if (current_stop != nullptr) {
-            std::pair<const Stop*, const Stop*> stop_to_stop = {current_stop, next_stop};
-            auto distance_prt = stops_distances_index_.find(stop_to_stop);
-            if (distance_prt == stops_distances_index_.end()) {
-                stop_to_stop = {next_stop, current_stop};
-                distance_prt = stops_distances_index_.find(stop_to_stop);
-            }
-            length += distance_prt->second;
+            route.geo_length += GetDistance(current_stop, next_stop);
         }
         current_stop = next_stop;
     }
-    return length;
-}
-
-double TransportCatalogue::ComputeCurvature(double geo_length, double direct_length) const {
-    return geo_length / direct_length;
 }
 
 } // namespace transport

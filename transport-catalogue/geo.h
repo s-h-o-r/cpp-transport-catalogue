@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include <string_view>
 
 namespace transport {
 
@@ -13,6 +14,11 @@ struct Coordinates {
     bool operator!=(const Coordinates& other) const {
         return !(*this == other);
     }
+};
+
+struct DistanceTo {
+    std::string_view next_stop_name;
+    int length_to_stop;
 };
 
 inline double ComputeDistance(Coordinates from, Coordinates to) {

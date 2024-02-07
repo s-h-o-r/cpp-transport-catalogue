@@ -23,8 +23,10 @@ struct Bus {
     std::string name;
     std::vector<const Stop*> route;
     size_t unique_stops_amount = 0;
+    int geo_length = 0;
 
     double ComputeDirectRouteLenght() const;
+    double ComputeCurvature() const;
 };
 
 namespace detail {
@@ -46,17 +48,17 @@ public:
     
     void AddStop(std::string_view name, const Coordinates& coordinates);
 
-    void AddDistances(std::string_view name, const std::vector<std::pair<std::string_view, int>>& distances);
+    void AddDistance(std::string_view from_name, std::string_view to_name, int distance);
 
     void AddBus(std::string_view name, const std::vector<std::string_view>& route);
     
-    const Bus* IsRouteExisted(std::string_view name) const;
+    const Bus* GetBusInfo(std::string_view name) const;
 
-    const Stop* IsStopExisted(std::string_view name) const;
-    
+    const Stop* GetStopInfo(std::string_view name) const;
+
+    int GetDistance(const Stop* from_name, const Stop* to_name) const;
+
     std::set<std::string_view> GetBusesListForStop(std::string_view name) const;
-
-    std::pair<int, double> GetGeoLengthAndCurvature(const Bus* route) const;
 
 private:
     std::deque<Stop> stops_;
@@ -67,8 +69,6 @@ private:
     std::unordered_map<std::pair<const Stop*, const Stop*>, int, 
                                  detail::PairPtrHasher, detail::PairComp> stops_distances_index_;
 
-    int ComputeGeoLength(const Bus* route) const;
-
-    double ComputeCurvature(double geo_length, double direct_length) const;
+    void FillGeoLength(Bus& route) const;
 };
 } // namespace transport

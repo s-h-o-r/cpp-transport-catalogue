@@ -21,16 +21,14 @@ void PrintBusStat(const TransportCatalogue& catalogue, std::string_view bus_name
                   std::ostream& output) {
     using namespace std::string_literals;
     output << "Bus "s << bus_name << ": "s;
-    const Bus* bus_info = catalogue.IsRouteExisted(bus_name);
+    const Bus* bus_info = catalogue.GetBusInfo(bus_name);
     if (bus_info == nullptr) {
         output  << "not found\n"s;
     } else {
-        auto [length, curvature] = catalogue.GetGeoLengthAndCurvature(bus_info);
-
         output << bus_info->route.size() << " stops on route, "s
         << bus_info->unique_stops_amount << " unique stops, "s
-        << length << " route length, "s
-        << std::setprecision(6) << curvature << " curvature\n";
+        << bus_info->geo_length << " route length, "s
+        << std::setprecision(6) << bus_info->ComputeCurvature() << " curvature\n";
     }
 }
 
@@ -38,7 +36,7 @@ void PrintStopStat(const TransportCatalogue& catalogue, std::string_view stop_na
                    std::ostream& output) {
     using namespace std::string_literals;
     output << "Stop "s << stop_name << ": "s;
-    if (catalogue.IsStopExisted(stop_name) == nullptr) {
+    if (catalogue.GetStopInfo(stop_name) == nullptr) {
         output  << "not found\n"s;
     } else {
         const std::set<std::string_view> buses_on_stop = catalogue.GetBusesListForStop(stop_name);

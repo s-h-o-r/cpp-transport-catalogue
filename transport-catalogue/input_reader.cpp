@@ -75,10 +75,10 @@ std::vector<std::string_view> ParseRoute(std::string_view route) {
     return results;
 }
 
-std::vector<std::pair<std::string_view, int>> ParseDistances(std::string_view description) {
+std::vector<DistanceTo> ParseDistances(std::string_view description) {
     std::vector<std::string_view> parsed_decription = Split(description, ',');
     parsed_decription.erase(parsed_decription.begin(), parsed_decription.begin() + 2); // удаляем координаты из вектора, которые тоже туда попали
-    std::vector<std::pair<std::string_view, int>> distances;
+    std::vector<DistanceTo> distances;
     for (const auto& string : parsed_decription) {
         auto m_pos = string.find('m');
         auto name_begin = m_pos + 5;
@@ -112,36 +112,43 @@ CommandDescription ParseCommandDescription(std::string_view line) {
 } // namespace transport::input::detail
 
 void InputReader::ParseLine(std::string_view line) {
+    using namespace std::string_literals;
     auto command_description = detail::ParseCommandDescription(line);
-    if (command_description) {
-        commands_.push_back(std::move(command_description));
+    if (command_description.command == "Stop"s) {
+        stop_commands_.push_back(std::move(command_description));
+    } else if (command_description.command == "Bus"s) {
+        bus_commands_.push_back(std::move(command_description));
     }
 }
 
 void InputReader::ApplyCommands([[maybe_unused]] TransportCatalogue& catalogue) {
-    using namespace std::string_literals;
+    ProcessStopCommands(catalogue);
+    ProcessBusCommands(catalogue);
+}
 
-    std::sort(commands_.begin(), commands_.end(), [](const CommandDescription& lhs, const CommandDescription& rhs)
-                                                    { return lhs.command > rhs.command; });
-    for (auto& command : commands_) {
+void InputReader::ProcessStopCommands([[maybe_unused]] TransportCatalogue& catalogue) {
+    for (auto& command : stop_commands_) {
         if (command) {
-            if (command.command == "Stop"s) {
-                catalogue.AddStop(command.id, detail::ParseCoordinates(command.description));
-            }
-
-            if (command.command == "Bus"s) {
-                catalogue.AddBus(command.id, detail::ParseRoute(command.description));
-            }
+            catalogue.AddStop(command.id, detail::ParseCoordinates(command.description));
         }
     }
 
-    for (auto& command : commands_) {
+    for (auto& command : stop_commands_) {
         if (command) {
-            if (command.command == "Stop"s) {
-                catalogue.AddDistances(command.id, detail::ParseDistances(command.description));
+            for (auto& [next_stop_name, length_to_stop] : detail::ParseDistances(command.description)) {
+                catalogue.AddDistance(command.id, next_stop_name, length_to_stop);
             }
         }
     }
 }
+
+void InputReader::ProcessBusCommands([[maybe_unused]] TransportCatalogue& catalogue) {
+    for (auto& command : bus_commands_) {
+        if (command) {
+            catalogue.AddBus(command.id, detail::ParseRoute(command.description));
+        }
+    }
+}
+
 } // namespace transport::input
 } // namespace transport
