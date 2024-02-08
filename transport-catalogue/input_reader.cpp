@@ -136,7 +136,9 @@ void InputReader::ProcessStopCommands([[maybe_unused]] TransportCatalogue& catal
     for (auto& command : stop_commands_) {
         if (command) {
             for (auto& [next_stop_name, length_to_stop] : detail::ParseDistances(command.description)) {
-                catalogue.AddDistance(command.id, next_stop_name, length_to_stop);
+                const Stop* stop_from = catalogue.GetStopInfo(command.id);
+                const Stop* stop_to = catalogue.GetStopInfo(next_stop_name);
+                catalogue.SetDistance(stop_from, stop_to, length_to_stop);
             }
         }
     }

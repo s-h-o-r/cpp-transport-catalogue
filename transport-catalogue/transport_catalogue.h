@@ -48,7 +48,7 @@ public:
     
     void AddStop(std::string_view name, const Coordinates& coordinates);
 
-    void AddDistance(std::string_view from_name, std::string_view to_name, int distance);
+    void SetDistance(const Stop* from_name, const Stop* to_name, int distance);
 
     void AddBus(std::string_view name, const std::vector<std::string_view>& route);
     

@@ -44,10 +44,8 @@ void TransportCatalogue::AddStop(std::string_view name, const Coordinates& coord
     stops_index_[stops_.back().name] = &stops_.back();
 }
 
-void TransportCatalogue::AddDistance(std::string_view from_name, std::string_view to_name, int distance) {
-    const Stop* stop1 = stops_index_.at(from_name);
-    const Stop* stop2 = stops_index_.at(to_name);
-    stops_distances_index_[{stop1, stop2}] = distance;
+void TransportCatalogue::SetDistance(const Stop* from_name, const Stop* to_name, int distance) {
+    stops_distances_index_[{from_name, to_name}] = distance;
 }
 
 void TransportCatalogue::AddBus(std::string_view name, const std::vector<std::string_view>& route) {
