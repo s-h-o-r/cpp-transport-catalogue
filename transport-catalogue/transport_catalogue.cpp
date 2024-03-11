@@ -21,35 +21,20 @@ bool PairComp::operator()(const std::pair<const Stop*, const Stop*>& lhs,
 
 } // namespace transport::detail
 
-double Bus::ComputeDirectRouteLenght() const {
-    double route_length = 0.0;
-    const Stop* from = nullptr;
-    for (const Stop* to : route) {
-        if (from == nullptr) {
-            from = to;
-            continue;
-        }
-        route_length += ComputeDistance(from->coordinates, to->coordinates);
-        from = to;
-    }
-    return route_length;
-}
-
-double Bus::ComputeCurvature() const {
-    return geo_length / ComputeDirectRouteLenght();
-}
-
-void TransportCatalogue::AddStop(std::string_view name, const Coordinates& coordinates) {
-    stops_.push_back({ std::string(name), coordinates });
+void TransportCatalogue::AddStop(Stop&& stop) {
+    stops_.push_back(std::move(stop));
     stops_index_[stops_.back().name] = &stops_.back();
+    stop_to_buses_index_[stops_.back().name];
 }
 
 void TransportCatalogue::SetDistance(const Stop* from_name, const Stop* to_name, int distance) {
     stops_distances_index_[{from_name, to_name}] = distance;
 }
 
-void TransportCatalogue::AddBus(std::string_view name, const std::vector<std::string_view>& route) {
+void TransportCatalogue::AddBus(std::string_view name, const std::vector<std::string_view>& route, bool is_round) {
     Bus bus;
+
+    bus.is_round = is_round;
     bus.name = std::string(name);
     for (auto stop : route) {
         assert(stops_index_.find(stop) != stops_index_.end());
@@ -86,21 +71,32 @@ const Stop* TransportCatalogue::GetStopInfo(std::string_view name) const {
     return nullptr;
 }
 
+std::vector<const Bus*> TransportCatalogue::GetRoutesList() const {
+    std::vector<const Bus*> routes_list;
+    for (const auto& bus : buses_) {
+        routes_list.push_back(&bus);
+    }
+    return routes_list;
+}
+
 int TransportCatalogue::GetDistance(const Stop* from_name, const Stop* to_name) const {
     auto distance_ptr = stops_distances_index_.find({from_name, to_name});
     if (distance_ptr == stops_distances_index_.end()) {
         distance_ptr = stops_distances_index_.find({to_name, from_name});
     }
+    if (distance_ptr == stops_distances_index_.end()) {
+        return 0;
+    }
 
     return distance_ptr->second;
 }
 
-std::set<std::string_view> TransportCatalogue::GetBusesListForStop(std::string_view name) const {
+const std::set<std::string_view>* TransportCatalogue::GetBusesListForStop(std::string_view name) const {
     if (stop_to_buses_index_.find(name) == stop_to_buses_index_.end()) {
-        return {};
+        return nullptr;
     }
     
-    return stop_to_buses_index_.at(name);
+    return &stop_to_buses_index_.at(name);
 }
 
 void TransportCatalogue::FillGeoLength(Bus& route) const {
@@ -112,6 +108,16 @@ void TransportCatalogue::FillGeoLength(Bus& route) const {
             route.geo_length += GetDistance(current_stop, next_stop);
         }
         current_stop = next_stop;
+    }
+
+    if (!route.is_round) {
+        for (auto iter = route.route.rbegin() + 1; iter != route.route.rend(); ++iter) {
+            next_stop = *iter;
+            if (current_stop != nullptr) {
+                route.geo_length += GetDistance(current_stop, next_stop);
+            }
+            current_stop = next_stop;
+        }
     }
 }
 
