@@ -19,7 +19,7 @@ const std::set<std::string_view>* RequestHandler::GetBusesByStop(const std::stri
 }
 
 void RequestHandler::RenderMap(std::ostream& output) {
-    renderer_.AddMapObjects(db_.GetRoutesList());
+    renderer_.RenderMapObjects(db_.GetRoutesList());
     renderer_.DrawMap(output);
 }
 

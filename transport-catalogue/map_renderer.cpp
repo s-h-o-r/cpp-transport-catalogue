@@ -47,7 +47,7 @@ void MapRenderer::SetSettings(const json::Document& render_settings) {
     }
 }
 
-void MapRenderer::AddMapObjects(std::vector<const transport::Bus*> routes) {
+void MapRenderer::RenderMapObjects(std::vector<const transport::Bus*> routes) {
     if (has_objects_to_draw_) {
         return;
     }
@@ -71,13 +71,13 @@ void MapRenderer::AddMapObjects(std::vector<const transport::Bus*> routes) {
         render_settings_.width, render_settings_.height, render_settings_.padding
     };
 
-    AddRoutes(routes, proj);
-    AddRoutesNames(routes, proj);
+    RenderRoutes(routes, proj);
+    RenderRoutesNames(routes, proj);
 
     std::sort(all_stops.begin(), all_stops.end(), [](const transport::Stop* lhs,
                                                const transport::Stop* rhs) {return lhs->name < rhs->name; });
-    AddStopsSymbols(all_stops, proj);
-    AddStopsNames(all_stops, proj);
+    RenderStopsSymbols(all_stops, proj);
+    RenderStopsNames(all_stops, proj);
     has_objects_to_draw_ = true;
 }
 
@@ -85,7 +85,7 @@ void MapRenderer::DrawMap(std::ostream& output) {
     objects_to_draw_.Render(output);
 }
 
-void MapRenderer::AddRoutes(std::vector<const transport::Bus*>& routes,
+void MapRenderer::RenderRoutes(std::vector<const transport::Bus*>& routes,
                            const SphereProjector& proj) {
 
     size_t color_number = 0;
@@ -124,7 +124,7 @@ void MapRenderer::AddRoutes(std::vector<const transport::Bus*>& routes,
     }
 }
 
-void MapRenderer::AddRoutesNames(std::vector<const transport::Bus*>& routes,
+void MapRenderer::RenderRoutesNames(std::vector<const transport::Bus*>& routes,
                     const SphereProjector& proj) {
     size_t color_number = 0;
     for (const transport::Bus* bus : routes) {
@@ -169,7 +169,7 @@ void MapRenderer::AddRoutesNames(std::vector<const transport::Bus*>& routes,
     }
 }
 
-void MapRenderer::AddStopsSymbols(std::vector<const transport::Stop*> stops,
+void MapRenderer::RenderStopsSymbols(std::vector<const transport::Stop*> stops,
                                   const SphereProjector& proj) {
     for (const transport::Stop* stop : stops) {
         objects_to_draw_.Add(Circle()
@@ -179,7 +179,7 @@ void MapRenderer::AddStopsSymbols(std::vector<const transport::Stop*> stops,
     }
 }
 
-void MapRenderer::AddStopsNames(std::vector<const transport::Stop*> stops,
+void MapRenderer::RenderStopsNames(std::vector<const transport::Stop*> stops,
                                 const SphereProjector& proj) {
     for (const transport::Stop* stop : stops) {
         svg::Text stop_name = Text()

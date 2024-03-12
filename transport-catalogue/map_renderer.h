@@ -105,7 +105,7 @@ class MapRenderer : private svg::Document {
 public:
     MapRenderer() = default;
     void SetSettings(const json::Document& render_settings);
-    void AddMapObjects(std::vector<const transport::Bus*> routes);
+    void RenderMapObjects(std::vector<const transport::Bus*> routes);
     void DrawMap(std::ostream& output);
 
 private:
@@ -114,16 +114,16 @@ private:
     bool has_objects_to_draw_ = false; // нужно, чтобы можно было вызвать RequestHandler.RenderMap повторно.
                               // иначе объекты конструируются повторно и происходит дублирование данных svg
 
-    void AddRoutes(std::vector<const transport::Bus*>& routes,
+    void RenderRoutes(std::vector<const transport::Bus*>& routes,
                   const SphereProjector& proj);
 
-    void AddRoutesNames(std::vector<const transport::Bus*>& routes,
+    void RenderRoutesNames(std::vector<const transport::Bus*>& routes,
                         const SphereProjector& proj);
 
-    void AddStopsSymbols(std::vector<const transport::Stop*> stops,
+    void RenderStopsSymbols(std::vector<const transport::Stop*> stops,
                          const SphereProjector& proj);
 
-    void AddStopsNames(std::vector<const transport::Stop*> stops,
+    void RenderStopsNames(std::vector<const transport::Stop*> stops,
                        const SphereProjector& proj);
 
     svg::Color ProcessColorSetting(const json::Node color_node);
