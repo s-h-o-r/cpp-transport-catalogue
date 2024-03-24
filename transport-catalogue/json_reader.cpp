@@ -17,15 +17,15 @@ using namespace std::literals;
 namespace detail {
 
 Requests ReadJson(std::istream& input) {
-    json::Dict all_requests = json::Load(input).GetRoot().AsMap();
+    json::Dict all_requests = json::Load(input).GetRoot().AsDict();
 
     if (all_requests.size() > 3) {
         throw std::logic_error("Unknown JSON document."s);
     }
 
-    return {json::Document{all_requests.at("base_requests"s).AsArray()},
-            json::Document{all_requests.at("stat_requests"s).AsArray()},
-            json::Document{all_requests.at("render_settings"s).AsMap()}};
+    return {json::Document{json::Builder{}.Value(all_requests.at("base_requests"s).AsArray()).Build()},
+            json::Document{json::Builder{}.Value(all_requests.at("stat_requests"s).AsArray()).Build()},
+            json::Document{json::Builder{}.Value(all_requests.at("render_settings"s).AsDict()).Build()}};
 }
 
 } // namespace transport::json_reader::detail
@@ -54,7 +54,7 @@ void JsonReader::LoadStops() {
     std::map<std::string_view, const json::Node*> road_distances;
 
     for (const auto& node : requests_.base_requests.GetRoot().AsArray()) {
-        const json::Dict& data = node.AsMap();
+        const json::Dict& data = node.AsDict();
         if (data.at("type"s).AsString() == "Stop"sv) {
             std::string_view stop_name = data.at("name"s).AsString();
             catalogue_.AddStop({std::string(stop_name),
@@ -64,7 +64,7 @@ void JsonReader::LoadStops() {
     }
 
     for (auto& [from, node] : road_distances) {
-        const json::Dict& distance_info = node->AsMap();
+        const json::Dict& distance_info = node->AsDict();
         for (const auto& [to, length_node] : distance_info) {
             const Stop* stop_from = catalogue_.GetStopInfo(from);
             const Stop* stop_to = catalogue_.GetStopInfo(to);
@@ -75,7 +75,7 @@ void JsonReader::LoadStops() {
 
 void JsonReader::LoadBuses() {
     for (const auto& node : requests_.base_requests.GetRoot().AsArray()) {
-        const json::Dict& data = node.AsMap();
+        const json::Dict& data = node.AsDict();
         if (data.at("type").AsString() == "Bus"sv) {
             std::vector<std::string_view> route;
             for (const auto& node : data.at("stops"s).AsArray()) {
@@ -88,65 +88,72 @@ void JsonReader::LoadBuses() {
 }
 
 json::Node JsonReader::ProcessStopRequest(const json::Dict& request_info) {
-    json::Dict stop_info;
-    stop_info.emplace("request_id"s, json::Node{request_info.at("id"s).AsInt()});
+    json::Builder stop_info;
+
+    stop_info.StartDict()
+                .Key("request_id"s).Value(request_info.at("id"s).AsInt());
 
     const std::set<std::string_view>* bus_list = handler_.GetBusesByStop(request_info.at("name"s).AsString());
     if (bus_list == nullptr) {
-        stop_info.emplace("error_message"s, json::Node("not found"s));
-        return json::Node{stop_info};
+        return stop_info.Key("error_message"s).Value("not found"s)
+                .EndDict()
+                .Build();
     }
-    json::Array bus_list_as_array;
+
+    stop_info.Key("buses"s).StartArray();
     for (const std::string_view bus : *bus_list) {
-        bus_list_as_array.push_back(json::Node(std::string(bus)));
+        stop_info.Value(std::string(bus));
     }
 
-    stop_info.emplace("buses"s, json::Node(bus_list_as_array));
-
-    return json::Node{stop_info};
+    return stop_info.EndArray().EndDict().Build();
 }
 
 json::Node JsonReader::ProcessBusRequest(const json::Dict& request_info) {
-    json::Dict bus_info;
-    bus_info.emplace("request_id"s, json::Node{request_info.at("id"s).AsInt()});
+    json::Builder bus_info;
+    bus_info.StartDict()
+               .Key("request_id"s).Value(request_info.at("id"s).AsInt());
 
     const Bus* bus_stat = handler_.GetBusStat(request_info.at("name"s).AsString());
     if (bus_stat == nullptr) {
-        bus_info.emplace("error_message"s, json::Node{"not found"s});
-        return json::Node{bus_info};
+        return bus_info.Key("error_message"s).Value("not found"s)
+                .EndDict()
+                .Build();
     }
-    bus_info.emplace("stop_count"s, json::Node{bus_stat->GetStopsAmount()});
-    bus_info.emplace("route_length"s, json::Node{bus_stat->geo_length});
-    bus_info.emplace("curvature"s, json::Node{bus_stat->ComputeCurvature()});
-    bus_info.emplace("unique_stop_count"s, json::Node{static_cast<int>(bus_stat->unique_stops_amount)});
 
-    return json::Node{bus_info};
+    bus_info.Key("stop_count"s).Value(bus_stat->GetStopsAmount())
+           .Key("route_length"s).Value(bus_stat->geo_length)
+           .Key("curvature"s).Value(bus_stat->ComputeCurvature())
+           .Key("unique_stop_count"s).Value(static_cast<int>(bus_stat->unique_stops_amount));
+
+    return bus_info.EndDict()
+                  .Build();
 }
 
 json::Node JsonReader::ProcessMapRequest(const json::Dict& request_info) {
-    json::Dict map;
-    map.emplace("request_id"s, json::Node{request_info.at("id"s).AsInt()});
-
     std::ostringstream svg;
     handler_.RenderMap(svg);
-    map.emplace("map"s, json::Node{svg.str()});
-    return json::Node{map};
+    return json::Builder{}.StartDict()
+                              .Key("request_id"s).Value(request_info.at("id"s).AsInt())
+                              .Key("map"s).Value(svg.str())
+                          .EndDict()
+                          .Build();
 }
 
 json::Document JsonReader::ProcessRequests() {
-    json::Array answers;
+    json::Builder answers;
+    answers.StartArray();
     for (const json::Node& node_request : requests_.stat_requests.GetRoot().AsArray()) {
-        const json::Dict& request_info = node_request.AsMap();
+        const json::Dict& request_info = node_request.AsDict();
         if (request_info.at("type"s).AsString() == "Stop"sv) {
-            answers.push_back(ProcessStopRequest(request_info));
+            answers.Value(ProcessStopRequest(request_info));
         } else if (request_info.at("type"s).AsString() == "Bus"sv) {
-            answers.push_back(ProcessBusRequest(request_info));
+            answers.Value(ProcessBusRequest(request_info));
         } else if (request_info.at("type"s).AsString() == "Map"sv) {
-            answers.push_back(ProcessMapRequest(request_info));
+            answers.Value(ProcessMapRequest(request_info));
         }
     }
 
-    return json::Document(json::Node(answers));
+    return json::Document{answers.EndArray().Build()};
 }
 
 } // namespace transport::json_reader

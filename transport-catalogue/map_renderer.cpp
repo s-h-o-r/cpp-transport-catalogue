@@ -12,7 +12,7 @@ bool IsZero(double value) {
 }
 
 void MapRenderer::SetSettings(const json::Document& render_settings) {
-    for (const auto& [setting_name, node] : render_settings.GetRoot().AsMap()) {
+    for (const auto& [setting_name, node] : render_settings.GetRoot().AsDict()) {
         if (setting_name == "width"sv) {
             render_settings_.width = node.AsDouble();
         } else if (setting_name == "height"sv) {

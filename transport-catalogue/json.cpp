@@ -247,6 +247,14 @@ Node LoadNode(std::istream& input) {
 
 }  // namespace
 
+const Value& Node::GetValue() const {
+    return *this;
+}
+
+Value& Node::GetValue() {
+    return *this;
+}
+
 bool Node::operator==(const Node& other) const {
     return other.GetValue() == *this;
 }
@@ -284,7 +292,7 @@ bool Node::IsArray() const {
     return std::holds_alternative<Array>(*this);
 }
 
-bool Node::IsMap() const {
+bool Node::IsDict() const {
     return std::holds_alternative<Dict>(*this);
 }
 
@@ -325,8 +333,8 @@ const Array& Node::AsArray() const {
     }
     return std::get<Array>(*this);
 }
-const Dict& Node::AsMap() const {
-    if (!IsMap()) {
+const Dict& Node::AsDict() const {
+    if (!IsDict()) {
         throw std::logic_error("Value has another type."s);
     }
     return std::get<Dict>(*this);

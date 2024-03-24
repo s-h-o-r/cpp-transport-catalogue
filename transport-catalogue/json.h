@@ -29,9 +29,8 @@ public:
     bool operator==(const Node& other) const;
     bool operator!=(const Node& lhs) const;
 
-    const variant& GetValue() const {
-        return *this;
-    }
+    const Value& GetValue() const;
+    Value& GetValue();
 
     bool IsInt() const;
     bool IsDouble() const;
@@ -40,14 +39,14 @@ public:
     bool IsString() const;
     bool IsNull() const;
     bool IsArray() const;
-    bool IsMap() const;
+    bool IsDict() const;
 
     int AsInt() const;
     bool AsBool() const;
     double AsDouble() const;
     const std::string& AsString() const;
     const Array& AsArray() const;
-    const Dict& AsMap() const;
+    const Dict& AsDict() const;
 };
 
 class Document {
