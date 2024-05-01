@@ -1,4 +1,5 @@
 #include "json_reader.h"
+#include "router.h"
 
 #include <algorithm>
 #include <map>
@@ -19,13 +20,14 @@ namespace detail {
 Requests ReadJson(std::istream& input) {
     json::Dict all_requests = json::Load(input).GetRoot().AsDict();
 
-    if (all_requests.size() > 3) {
+    if (all_requests.size() > 4) {
         throw std::logic_error("Unknown JSON document."s);
     }
 
     return {json::Document{json::Builder{}.Value(all_requests.at("base_requests"s).AsArray()).Build()},
-            json::Document{json::Builder{}.Value(all_requests.at("stat_requests"s).AsArray()).Build()},
-            json::Document{json::Builder{}.Value(all_requests.at("render_settings"s).AsDict()).Build()}};
+        json::Document{json::Builder{}.Value(all_requests.at("stat_requests"s).AsArray()).Build()},
+        json::Document{json::Builder{}.Value(all_requests.at("render_settings"s).AsDict()).Build()},
+        json::Document{json::Builder{}.Value(all_requests.at("routing_settings"s).AsDict()).Build()}};
 }
 
 } // namespace transport::json_reader::detail
@@ -33,16 +35,26 @@ Requests ReadJson(std::istream& input) {
 JsonReader::JsonReader(std::istream& input, TransportCatalogue& catalogue, handler::RequestHandler& handler)
     : requests_(detail::ReadJson(input))
     , catalogue_(catalogue)
+    , routes_graph_(catalogue_)
     , handler_(handler) {
 }
 
-const json::Document& JsonReader::TakeRenderSettings() const{
+const json::Document& JsonReader::TakeRenderSettings() const {
     return requests_.render_settings;
+}
+
+const json::Document& JsonReader::TakeRoutingSettings() const {
+    return requests_.routing_settings;
 }
 
 TransportCatalogue& JsonReader::BuildCatalogue() {
     LoadStops();
     LoadBuses();
+
+    auto settings = requests_.routing_settings.GetRoot().AsDict();
+    RouteSettings route_settings{settings.at("bus_wait_time"s).AsInt(), settings.at("bus_velocity"s).AsInt()};
+    routes_graph_.BuildGraph(route_settings);
+
     return catalogue_;
 }
 
@@ -139,6 +151,51 @@ json::Node JsonReader::ProcessMapRequest(const json::Dict& request_info) {
                           .Build();
 }
 
+json::Node JsonReader::ProcessRouteRequest(const json::Dict& request_info) {
+    json::Builder answer;
+    answer.StartDict()
+            .Key("request_id"s).Value(request_info.at("id"s).AsInt());
+
+    if (catalogue_.GetStopInfo(request_info.at("from"s).AsString()) == nullptr
+        || catalogue_.GetStopInfo(request_info.at("to"s).AsString()) == nullptr) {
+        return answer.Key("error_message"s).Value("not found"s)
+                    .EndDict()
+                    .Build();
+    }
+
+    auto route_info = routes_graph_.BuildRoute(catalogue_.GetStopInfo(request_info.at("from"s).AsString()),
+                                               catalogue_.GetStopInfo(request_info.at("to"s).AsString()));
+
+    if (!route_info) {
+        answer.Key("error_message"s).Value("not found"s);
+    } else {
+        answer.Key("total_time"s).Value(route_info.value().weight)
+              .Key("items"s).StartArray();
+        
+        for (graph::EdgeId edge_id : route_info.value().edges) {
+            const EdgeInfo* edge_info = routes_graph_.GetEdgeInfo(edge_id);
+            if (edge_info->from == edge_info->to) {
+                answer.StartDict()
+                        .Key("type"s).Value("Wait"s)
+                        .Key("stop_name"s).Value(edge_info->from->name)
+                        .Key("time").Value(routes_graph_.GetEdgeWeight(edge_id))
+                      .EndDict();
+            } else {
+                answer.StartDict()
+                        .Key("type"s).Value("Bus"s)
+                        .Key("bus"s).Value(edge_info->bus->name)
+                        .Key("span_count"s).Value(edge_info->span_count)
+                        .Key("time").Value(routes_graph_.GetEdgeWeight(edge_id))
+                      .EndDict();
+            }
+        }
+        answer.EndArray();
+    }
+
+    return answer.EndDict().Build();
+
+}
+
 json::Document JsonReader::ProcessRequests() {
     json::Builder answers;
     answers.StartArray();
@@ -150,6 +207,8 @@ json::Document JsonReader::ProcessRequests() {
             answers.Value(ProcessBusRequest(request_info));
         } else if (request_info.at("type"s).AsString() == "Map"sv) {
             answers.Value(ProcessMapRequest(request_info));
+        } else if (request_info.at("type"s).AsString() == "Route"sv) {
+            answers.Value(ProcessRouteRequest(request_info));
         }
     }
 

@@ -1,11 +1,15 @@
 #pragma once
 
 #include "domain.h"
+#include "graph.h"
+#include "router.h"
 
 #include <deque>
 #include <functional>
+#include <optional>
 #include <set>
 #include <string_view>
+#include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -30,19 +34,13 @@ class TransportCatalogue {
 public:
     
     void AddStop(Stop&& stop);
-
     void SetDistance(const Stop* from_name, const Stop* to_name, int distance);
-
     void AddBus(std::string_view name, const std::vector<std::string_view>& route, bool is_round);
-    
     const Bus* GetBusInfo(std::string_view name) const;
-
     const Stop* GetStopInfo(std::string_view name) const;
-
-    std::vector<const Bus*> GetRoutesList() const;
-
+    const std::deque<Stop>& GetStopsList() const;
+    const std::deque<Bus>& GetRoutesList() const;
     int GetDistance(const Stop* from_name, const Stop* to_name) const;
-
     const std::set<std::string_view>* GetBusesListForStop(std::string_view name) const;
 
 private:
@@ -56,4 +54,28 @@ private:
 
     void FillGeoLength(Bus& route) const;
 };
+
+class RoutesGraph {
+public:
+    RoutesGraph(const TransportCatalogue& db);
+    std::pair<size_t, size_t> GetStopVertexes(const Stop* stop) const;
+    const graph::DirectedWeightedGraph<double>* GetGraph() const;
+    const EdgeInfo* GetEdgeInfo(graph::EdgeId edge_id) const;
+    double GetEdgeWeight(graph::EdgeId edge_id) const;
+    void BuildGraph(const RouteSettings& settings);
+    std::optional<graph::Router<double>::RouteInfo> BuildRoute(const Stop* from, const Stop* to) const;
+
+private:
+    const TransportCatalogue& db_;
+    std::optional<graph::DirectedWeightedGraph<double>> routes_graph_ = std::nullopt;
+    std::optional<graph::Router<double>> router_ = std::nullopt;
+    std::unordered_map<const Stop*, std::pair<size_t, size_t>> vertex_index_;
+    std::unordered_map<graph::EdgeId, EdgeInfo> edges_index_;
+
+    void AddVertexes(const RouteSettings& settings);
+    void AddRouteEdges(const RouteSettings& settings);
+    void BuildRouter();
+
+};
+
 } // namespace transport

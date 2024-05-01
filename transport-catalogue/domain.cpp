@@ -29,5 +29,4 @@ double Bus::ComputeDirectRouteLenght() const {
 double Bus::ComputeCurvature() const {
     return geo_length / ComputeDirectRouteLenght();
 }
-
 } //namespace transport

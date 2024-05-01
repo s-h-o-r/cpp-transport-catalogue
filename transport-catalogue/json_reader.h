@@ -15,6 +15,7 @@ struct Requests {
     json::Document base_requests;
     json::Document stat_requests;
     json::Document render_settings;
+    json::Document routing_settings;
 };
 
 class JsonReader {
@@ -24,6 +25,7 @@ public:
                handler::RequestHandler& handler);
 
     const json::Document& TakeRenderSettings() const;
+    const json::Document& TakeRoutingSettings() const;
 
     TransportCatalogue& BuildCatalogue();
 
@@ -32,6 +34,7 @@ public:
 private:
     Requests requests_;
     TransportCatalogue& catalogue_;
+    RoutesGraph routes_graph_;
     handler::RequestHandler& handler_;
 
     void LoadStops();
@@ -40,6 +43,7 @@ private:
     json::Node ProcessStopRequest(const json::Dict& request_info);
     json::Node ProcessBusRequest(const json::Dict& request_info);
     json::Node ProcessMapRequest(const json::Dict& request_info);
+    json::Node ProcessRouteRequest(const json::Dict& request_info);
     json::Document ProcessRequests();
 };
 

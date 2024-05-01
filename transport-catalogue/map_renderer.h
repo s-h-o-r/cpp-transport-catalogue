@@ -6,6 +6,7 @@
 #include "svg.h"
 
 #include <algorithm>
+#include <deque>
 #include <iostream>
 #include <optional>
 #include <vector>
@@ -105,7 +106,7 @@ class MapRenderer : private svg::Document {
 public:
     MapRenderer() = default;
     void SetSettings(const json::Document& render_settings);
-    void RenderMapObjects(std::vector<const transport::Bus*> routes);
+    void RenderMapObjects(const std::deque<transport::Bus>& buses);
     void DrawMap(std::ostream& output);
 
 private:

@@ -34,5 +34,7 @@ private:
     map_renderer::MapRenderer& renderer_;
 };
 
+
+
 } // namespace transport::infrastructure
 } // namespace infrastructure

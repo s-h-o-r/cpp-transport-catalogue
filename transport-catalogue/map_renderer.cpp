@@ -47,7 +47,12 @@ void MapRenderer::SetSettings(const json::Document& render_settings) {
     }
 }
 
-void MapRenderer::RenderMapObjects(std::vector<const transport::Bus*> routes) {
+void MapRenderer::RenderMapObjects(const std::deque<transport::Bus>& buses) {
+    std::vector<const transport::Bus*> routes;
+    for (const auto& bus : buses) {
+        routes.push_back(&bus);
+    }
+
     if (has_objects_to_draw_) {
         return;
     }
