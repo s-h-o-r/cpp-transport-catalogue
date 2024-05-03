@@ -1,5 +1,4 @@
 #include "json_reader.h"
-#include "router.h"
 
 #include <algorithm>
 #include <map>
@@ -35,7 +34,6 @@ Requests ReadJson(std::istream& input) {
 JsonReader::JsonReader(std::istream& input, TransportCatalogue& catalogue, handler::RequestHandler& handler)
     : requests_(detail::ReadJson(input))
     , catalogue_(catalogue)
-    , routes_graph_(catalogue_)
     , handler_(handler) {
 }
 
@@ -52,8 +50,8 @@ TransportCatalogue& JsonReader::BuildCatalogue() {
     LoadBuses();
 
     auto settings = requests_.routing_settings.GetRoot().AsDict();
-    RouteSettings route_settings{settings.at("bus_wait_time"s).AsInt(), settings.at("bus_velocity"s).AsInt()};
-    routes_graph_.BuildGraph(route_settings);
+    graph::RouteSettings route_settings{settings.at("bus_wait_time"s).AsInt(), settings.at("bus_velocity"s).AsInt()};
+    routes_graph_ = std::make_unique<graph::RoutesGraph>(graph::RoutesGraph(catalogue_, route_settings));
 
     return catalogue_;
 }
@@ -163,7 +161,11 @@ json::Node JsonReader::ProcessRouteRequest(const json::Dict& request_info) {
                     .Build();
     }
 
-    auto route_info = routes_graph_.BuildRoute(catalogue_.GetStopInfo(request_info.at("from"s).AsString()),
+    if (!routes_graph_) {
+        throw std::logic_error("Graph doesn't exist yet."s);
+    }
+
+    auto route_info = routes_graph_->BuildRoute(catalogue_.GetStopInfo(request_info.at("from"s).AsString()),
                                                catalogue_.GetStopInfo(request_info.at("to"s).AsString()));
 
     if (!route_info) {
@@ -172,20 +174,19 @@ json::Node JsonReader::ProcessRouteRequest(const json::Dict& request_info) {
         answer.Key("total_time"s).Value(route_info.value().weight)
               .Key("items"s).StartArray();
         
-        for (graph::EdgeId edge_id : route_info.value().edges) {
-            const EdgeInfo* edge_info = routes_graph_.GetEdgeInfo(edge_id);
+        for (const graph::RoutesGraph::EdgeInfo* edge_info : route_info->edges_info) {
             if (edge_info->from == edge_info->to) {
                 answer.StartDict()
                         .Key("type"s).Value("Wait"s)
                         .Key("stop_name"s).Value(edge_info->from->name)
-                        .Key("time").Value(routes_graph_.GetEdgeWeight(edge_id))
+                        .Key("time").Value(edge_info->weight)
                       .EndDict();
             } else {
                 answer.StartDict()
                         .Key("type"s).Value("Bus"s)
                         .Key("bus"s).Value(edge_info->bus->name)
                         .Key("span_count"s).Value(edge_info->span_count)
-                        .Key("time").Value(routes_graph_.GetEdgeWeight(edge_id))
+                        .Key("time").Value(edge_info->weight)
                       .EndDict();
             }
         }

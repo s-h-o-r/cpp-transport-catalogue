@@ -4,8 +4,11 @@
 #include "json_builder.h"
 #include "request_handler.h"
 #include "transport_catalogue.h"
+#include "transport_router.h"
 
 #include <iostream>
+#include <optional>
+#include <memory>
 
 namespace transport {
 
@@ -34,7 +37,7 @@ public:
 private:
     Requests requests_;
     TransportCatalogue& catalogue_;
-    RoutesGraph routes_graph_;
+    std::unique_ptr<graph::RoutesGraph> routes_graph_;
     handler::RequestHandler& handler_;
 
     void LoadStops();

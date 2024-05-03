@@ -1,12 +1,9 @@
 #pragma once
 
 #include "domain.h"
-#include "graph.h"
-#include "router.h"
 
 #include <deque>
 #include <functional>
-#include <optional>
 #include <set>
 #include <string_view>
 #include <string>
@@ -54,28 +51,4 @@ private:
 
     void FillGeoLength(Bus& route) const;
 };
-
-class RoutesGraph {
-public:
-    RoutesGraph(const TransportCatalogue& db);
-    std::pair<size_t, size_t> GetStopVertexes(const Stop* stop) const;
-    const graph::DirectedWeightedGraph<double>* GetGraph() const;
-    const EdgeInfo* GetEdgeInfo(graph::EdgeId edge_id) const;
-    double GetEdgeWeight(graph::EdgeId edge_id) const;
-    void BuildGraph(const RouteSettings& settings);
-    std::optional<graph::Router<double>::RouteInfo> BuildRoute(const Stop* from, const Stop* to) const;
-
-private:
-    const TransportCatalogue& db_;
-    std::optional<graph::DirectedWeightedGraph<double>> routes_graph_ = std::nullopt;
-    std::optional<graph::Router<double>> router_ = std::nullopt;
-    std::unordered_map<const Stop*, std::pair<size_t, size_t>> vertex_index_;
-    std::unordered_map<graph::EdgeId, EdgeInfo> edges_index_;
-
-    void AddVertexes(const RouteSettings& settings);
-    void AddRouteEdges(const RouteSettings& settings);
-    void BuildRouter();
-
-};
-
 } // namespace transport

@@ -23,17 +23,4 @@ struct Bus {
     double ComputeDirectRouteLenght() const;
     double ComputeCurvature() const;
 };
-
-struct RouteSettings {
-    int bus_wait_time = 0;
-    int bus_velocity = 0;
-};
-
-struct EdgeInfo {
-    const Stop* from;
-    const Stop* to;
-    const Bus* bus;
-    int span_count = 0;
-    double weight = 0.;
-};
 } // namespace transport
