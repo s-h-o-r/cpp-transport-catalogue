@@ -74,7 +74,6 @@ Node LoadNumber(std::istream& input) {
 
     std::string parsed_num;
 
-    // Считывает в parsed_num очередной символ из input
     auto read_char = [&parsed_num, &input] {
         parsed_num += static_cast<char>(input.get());
         if (!input) {
@@ -82,7 +81,6 @@ Node LoadNumber(std::istream& input) {
         }
     };
 
-    // Считывает одну или более цифр в parsed_num из input
     auto read_digits = [&input, read_char] {
         if (!std::isdigit(input.peek())) {
             throw ParsingError("A digit is expected"s);
@@ -95,23 +93,20 @@ Node LoadNumber(std::istream& input) {
     if (input.peek() == '-') {
         read_char();
     }
-    // Парсим целую часть числа
+
     if (input.peek() == '0') {
         read_char();
-        // После 0 в JSON не могут идти другие цифры
     } else {
         read_digits();
     }
 
     bool is_int = true;
-    // Парсим дробную часть числа
     if (input.peek() == '.') {
         is_int = false;
         read_char();
         read_digits();
     }
 
-    // Парсим экспоненциальную часть числа
     if (char ch = input.peek(); ch == 'e' || ch == 'E') {
         read_char();
         if (ch = input.peek(); ch == '+' || ch == '-') {
@@ -123,13 +118,10 @@ Node LoadNumber(std::istream& input) {
 
     try {
         if (is_int) {
-            // Сначала пробуем преобразовать строку в int
             try {
                 int num = std::stoi(parsed_num);
                 return Node{num};
             } catch (...) {
-                // В случае неудачи, например, при переполнении,
-                // код ниже попробует преобразовать строку в double
             }
         }
         double num = std::stod(parsed_num);
@@ -145,23 +137,18 @@ Node LoadString(std::istream& input) {
     std::string s;
     while (true) {
         if (it == end) {
-            // Поток закончился до того, как встретили закрывающую кавычку?
             throw ParsingError("String parsing error");
         }
         const char ch = *it;
         if (ch == '"') {
-            // Встретили закрывающую кавычку
             ++it;
             break;
         } else if (ch == '\\') {
-            // Встретили начало escape-последовательности
             ++it;
             if (it == end) {
-                // Поток завершился сразу после символа обратной косой черты
                 throw ParsingError("String parsing error");
             }
             const char escaped_char = *(it);
-            // Обрабатываем одну из последовательностей: \\, \n, \t, \r, \"
             switch (escaped_char) {
                 case 'n':
                     s.push_back('\n');
@@ -179,14 +166,11 @@ Node LoadString(std::istream& input) {
                     s.push_back('\\');
                     break;
                 default:
-                    // Встретили неизвестную escape-последовательность
                     throw ParsingError("Unrecognized escape sequence \\"s + escaped_char);
             }
         } else if (ch == '\n' || ch == '\r') {
-            // Строковый литерал внутри- JSON не может прерываться символами \r или \n
             throw ParsingError("Unexpected end of line"s);
         } else {
-            // Просто считываем очередной символ и помещаем его в результирующую строку
             s.push_back(ch);
         }
         ++it;
