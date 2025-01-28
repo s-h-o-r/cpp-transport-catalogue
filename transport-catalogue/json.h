@@ -11,12 +11,10 @@
 namespace json {
 
 class Node;
-// Сохраните объявления Dict и Array без изменения
 using Dict = std::map<std::string, Node>;
 using Array = std::vector<Node>;
 using Value = std::variant<std::nullptr_t, bool, int, double, std::string, Array, Dict>;
 
-// Эта ошибка должна выбрасываться при ошибках парсинга JSON
 class ParsingError : public std::runtime_error {
 public:
     using runtime_error::runtime_error;
