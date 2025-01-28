@@ -49,11 +49,6 @@ struct RenderContext {
     int indent = 0;
 };
 
-/*
- * Абстрактный базовый класс Object служит для унифицированного хранения
- * конкретных тегов SVG-документа
- * Реализует паттерн "Шаблонный метод" для вывода содержимого тега
- */
 class Object {
 public:
     void Render(const RenderContext& context) const;
@@ -178,8 +173,6 @@ protected:
 
 private:
     Owner& AsOwner() {
-        // static_cast безопасно преобразует *this к Owner&,
-        // если класс Owner — наследник PathProps
         return static_cast<Owner&>(*this);
     }
 
@@ -190,10 +183,6 @@ private:
     std::optional<StrokeLineJoin> line_join_;
 };
 
-/*
- * Класс Circle моделирует элемент <circle> для отображения круга
- * https://developer.mozilla.org/en-US/docs/Web/SVG/Element/circle
- */
 class Circle final : public Object, public PathProps<Circle> {
 public:
     Circle& SetCenter(Point center);
@@ -206,13 +195,8 @@ private:
     double radius_ = 1.0;
 };
 
-/*
- * Класс Polyline моделирует элемент <polyline> для отображения ломаных линий
- * https://developer.mozilla.org/en-US/docs/Web/SVG/Element/polyline
- */
 class Polyline final : public Object, public PathProps<Polyline> {
 public:
-    // Добавляет очередную вершину к ломаной линии
     Polyline& AddPoint(Point point);
 
 private:
@@ -221,31 +205,15 @@ private:
     std::vector<Point> points_;
 };
 
-/*
- * Класс Text моделирует элемент <text> для отображения текста
- * https://developer.mozilla.org/en-US/docs/Web/SVG/Element/text
- */
 class Text final : public Object, public PathProps<Text> {
 public:
-    // Задаёт координаты опорной точки (атрибуты x и y)
     Text& SetPosition(Point pos);
-
-    // Задаёт смещение относительно опорной точки (атрибуты dx, dy)
     Text& SetOffset(Point offset);
-
-    // Задаёт размеры шрифта (атрибут font-size)
     Text& SetFontSize(uint32_t size);
-
-    // Задаёт название шрифта (атрибут font-family)
     Text& SetFontFamily(std::string font_family);
-
-    // Задаёт толщину шрифта (атрибут font-weight)
     Text& SetFontWeight(std::string font_weight);
-
-    // Задаёт текстовое содержимое объекта (отображается внутри тега text)
     Text& SetData(std::string data);
 
-    // Прочие данные и методы, необходимые для реализации элемента <text>
 private:
     void RenderObject(const RenderContext& context) const override;
 
@@ -278,13 +246,8 @@ public:
 class Document : public ObjectContainer {
 public:
 
-    // Добавляет в svg-документ объект-наследник svg::Object
     void AddPtr(std::unique_ptr<Object>&& obj) override;
-
-    // Выводит в ostream svg-представление документа
     void Render(std::ostream& out) const;
-
-    // Прочие методы и данные, необходимые для реализации класса Document
 private:
     std::vector<std::unique_ptr<Object>> objects_;
 };
